@@ -9,8 +9,8 @@ namespace PowerAppCDSHelper.Model
 {
     public class Schema
     {
-        [JsonProperty(PropertyName = "$id")]
-        public int Id { get; set; }
+        [JsonProperty(Constants.ID_REPLACE_VALUE)]
+        public string Id { get; set; }
 
         [JsonProperty(PropertyName = "targetType")]
         public string TargetType { get; set; }

@@ -1,12 +1,13 @@
 ﻿using Newtonsoft.Json;
 using System.Collections.Generic;
+using System.Runtime.Serialization;
 
 namespace PowerAppCDSHelper.Model
 {
     public class Field
     {
-        [JsonProperty(PropertyName = "$id", TypeNameHandling = TypeNameHandling.All)]
-        public int Id { get; set; }
+        [JsonProperty(PropertyName = Constants.ID_REPLACE_VALUE)]
+        public string  Id { get; set; }
 
         [JsonProperty(PropertyName = "name")]
         public string Name { get; set; }
@@ -29,7 +30,7 @@ namespace PowerAppCDSHelper.Model
 
     public class TypeDetails
     {
-        [JsonProperty(PropertyName = "$type", TypeNameHandling = TypeNameHandling.All)]
+        [JsonProperty(PropertyName = Constants.TYPE_REPLACE_STRING, TypeNameHandling = TypeNameHandling.All)]
         public string sType { get; set; }
 
         [JsonProperty(PropertyName = "type")]
