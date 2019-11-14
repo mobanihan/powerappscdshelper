@@ -49,6 +49,7 @@
     <Compile Include="EntityMappingTask.cs" />
     <Compile Include="Environment.cs" />
     <Compile Include="Field.cs" />
+    <Compile Include="Project.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SaveRequest.cs" />
     <Compile Include="Schema.cs" />
