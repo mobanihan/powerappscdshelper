@@ -73,6 +73,7 @@
       <DependentUpon>Form1.cs</DependentUpon>
     </Compile>
     <Compile Include="Program.cs" />
+    <Compile Include="Project.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="CodeGrantOauth.cs">
       <SubType>Form</SubType>
@@ -107,12 +108,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\PowerAppCDSHelper.Model\PowerAppCDSHelper.Model.csproj">
-      <Project>{43ecfc2f-b33a-4bf7-9e76-09ed8d242b23}</Project>
-      <Name>PowerAppCDSHelper.Model</Name>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
