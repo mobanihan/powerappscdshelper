@@ -25,7 +25,16 @@ namespace PowerAppCDSHelper
 
         private string getToken()
         {
-            return txt_pass.Text;
+            if (string.IsNullOrEmpty(Form2.AccessToken))
+            {
+                var frm2 = new Form2();
+                var r = frm2.ShowDialog();
+                
+            }
+            txt_pass.Text = Form2.AccessToken;
+            lbl_status.Text = "Connected!";
+            lbl_status.ForeColor = Color.Green;
+            return Form2.AccessToken;
         }
 
         private void button1_Click(object sender, EventArgs e)
