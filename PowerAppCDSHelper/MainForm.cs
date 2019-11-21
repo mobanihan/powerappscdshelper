@@ -1,66 +1,83 @@
 ﻿using Microsoft.Win32;
-using Newtonsoft.Json;
-using PowerAppCDSHelper.Utils;
+using PowerAppCDSHelper.Model;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Diagnostics;
 using System.Drawing;
-using System.IO;
 using System.Linq;
-using System.Net;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace PowerAppCDSHelper
 {
-    public partial class Form2 : Form
+    public partial class MainForm : Form
     {
-        string login_url = "https://admin.powerplatform.microsoft.com/account/login";
-        string token_url = "https://admin.powerplatform.microsoft.com/account/token";
-        string support_url = "https://admin.powerplatform.microsoft.com/support";
-        public static string AccessToken;
-
-        public Form2()
+        ProjectStore store;
+        public MainForm()
         {
             InitializeComponent();
-
             var appName = Process.GetCurrentProcess().ProcessName + ".exe";
-            SetIE8KeyforWebBrowserControl(appName);
+            SetIE11KeyforWebBrowserControl(appName);
 
-            webBrowser1.Navigate("javascript:void((function(){var a,b,c,e,f;f=0;a=document.cookie.split('; ');for(e=0;e<a.length&&a[e];e++){f++;for(b='.'+location.host;b;b=b.replace(/^(?:%5C.|[^%5C.]+)/,'')){for(c=location.pathname;c;c=c.replace(/.$/,'')){document.cookie=(a[e]+'; domain='+b+'; path='+c+'; expires='+new Date((new Date()).getTime()-1e11).toGMTString());}}}})())");
-
-            webBrowser1.Navigate(login_url);
-            webBrowser1.Navigated += WebBrowser1_Navigated;
+            backgroundWorker1.RunWorkerAsync();
         }
 
-        private void WebBrowser1_Navigated(object sender, WebBrowserNavigatedEventArgs e)
+        public static string NewAccessToken()
         {
-            if (e.Url.ToString().ToLower().Contains(support_url))
+            var dialog = new LoginForm().ShowDialog();
+            return LoginForm.AccessToken;
+        }
+ 
+        public static string GetAccessToken()
+        {
+            if (string.IsNullOrEmpty(LoginForm.AccessToken))
+                return MainForm.NewAccessToken();
+            return LoginForm.AccessToken;
+        }
+
+        private void btn_combine_Click(object sender, EventArgs e)
+        {
+            var destinationProject = store[dest.SelectedText]; 
+            foreach (TreeNode node in tree.Nodes)
             {
-                try
+                if (node.Checked)
                 {
-                    var cookies = FullWebBrowserCookie.GetCookieInternal(webBrowser1.Url, false);
-                    WebClient wc = new WebClient();
-                    wc.Headers.Add("Cookie: " + cookies);
-                    wc.Headers.Add("Content-Type", "application/json");
-                    wc.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 6.3; WOW64; Trident/7.0; Touch; .NET4.0E; .NET4.0C; .NET CLR 3.5.30729; .NET CLR 2.0.50727; .NET CLR 3.0.30729; Tablet PC 2.0; rv:11.0) like Gecko");
-                    byte[] result = wc.UploadData(token_url, "POST", System.Text.Encoding.UTF8.GetBytes("{\"resource\":\"https://IntegratorApp.com\",\"origin\":\"DataIntegration\"}"));
-
-                    dynamic obj = JsonConvert.DeserializeObject(Encoding.UTF8.GetString(result));
-                    Form2.AccessToken = obj.accessToken.ToString();
-                    this.Dispose();
+                    if (node.Parent != null && !node.Parent.Checked)
+                    {
+                        destinationProject.AppendTasks(node.Name, 
+                            store[node.Parent.Name].Tasks[node.Name], store[node.Name].Environments);
+                    }
+                    else if (node.Parent == null)
+                    {
+                        foreach (var task in store[node.Name].Tasks)
+                        {
+                            destinationProject.AppendTasks(task.Key, 
+                                task.Value, store[node.Name].Environments);
+                        }
+                    }
                 }
-                catch
-                {
+            }
+            destinationProject.Update();
+        }
 
+
+        private void Init()
+        {
+            store = ProjectStore.GetInstance(new Authentication(MainForm.GetAccessToken()));
+            foreach (var project in store.Projects)
+            {
+                var node = tree.Nodes.Add(project.ProjectName, project.DisplayName);
+                foreach (var task in project.Tasks)
+                {
+                    node.Nodes.Add(task.Key);
                 }
             }
         }
-        private void SetIE8KeyforWebBrowserControl(string appName)
+        #region Sys
+        private void SetIE11KeyforWebBrowserControl(string appName)
         {
             RegistryKey Regkey = null;
             try
@@ -100,7 +117,7 @@ namespace PowerAppCDSHelper
                 {
 
                 }
-                    //MessageBox.Show("Application Settings Applied Successfully");
+                //MessageBox.Show("Application Settings Applied Successfully");
                 else
                     MessageBox.Show("Application Settings Failed, Ref: " + FindAppkey);
             }
@@ -115,6 +132,12 @@ namespace PowerAppCDSHelper
                 if (Regkey != null)
                     Regkey.Close();
             }
+        }
+        #endregion
+
+        private void backgroundWorker1_DoWork(object sender, DoWorkEventArgs e)
+        {
+            Init();
         }
     }
 }

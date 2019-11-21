@@ -42,8 +42,6 @@ Content-Length: 0
             };
             request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-            //client.DefaultRequestHeaders.Authorization = 
-            //  new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
 
             var response = AsyncUtil.RunSync<HttpResponseMessage>(() => client.SendAsync(request));
