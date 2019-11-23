@@ -155,6 +155,8 @@ namespace PowerAppCDSHelper
             Invoke(new Action(() =>
             {
                 this.Enabled = false;
+                tree.Nodes.Clear();
+                dest.Items.Clear();
             }));
             store = ProjectStore.GetInstance(new Authentication());
 
