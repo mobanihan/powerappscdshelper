@@ -1,20 +1,18 @@
 ﻿using Microsoft.Win32;
 using PowerAppCDSHelper.Model;
 using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Diagnostics;
 using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Threading;
 using System.Windows.Forms;
 
 namespace PowerAppCDSHelper
 {
     public partial class MainForm : Form
     {
+        //GetToken
+        //Init Store 
+        //UpdateProgress.
         ProjectStore store;
         public MainForm()
         {
@@ -22,60 +20,164 @@ namespace PowerAppCDSHelper
             var appName = Process.GetCurrentProcess().ProcessName + ".exe";
             SetIE11KeyforWebBrowserControl(appName);
 
-            backgroundWorker1.RunWorkerAsync();
+            ProjectStore.ProgressChanged = new Action<int, int>((current, total) =>
+            {
+                var percent = Math.Ceiling(current / (float)total * 100);
+                Invoke(new Action(() =>
+                {
+                    this.progressBar1.Value = (int)percent;
+                }));
+            });
+
+            ProjectStore.Log = new Action<string, bool>((message, red) =>
+            {
+                Invoke(new Action(() =>
+                {
+                    WriteOutput(message, red);
+                }));
+            });
+
+            Authentication.GetToken = new Func<string>(() =>
+            {
+                return NewAccessToken();
+            });
+
+            this.txt_output.AppendText("Starting....");
+            new Thread(() =>
+            {
+                Init();
+            })
+                .Start();
         }
 
-        public static string NewAccessToken()
+        public void WriteOutput(string message, bool red = false)
         {
-            var dialog = new LoginForm().ShowDialog();
-            return LoginForm.AccessToken;
+            this.txt_output.SelectionStart = this.txt_output.TextLength;
+            this.txt_output.SelectionColor = red ? Color.Red : Color.Black;
+            this.txt_output.AppendText(message);
+            this.txt_output.SelectionColor = Color.Black;
+
+            this.txt_output.SelectionStart = this.txt_output.TextLength;
+            this.txt_output.ScrollToCaret();
         }
- 
-        public static string GetAccessToken()
+
+        public string NewAccessToken()
+        {
+            return Invoke(new Func<string>(() =>
+            {
+                var dialog = new LoginForm().ShowDialog();
+                return LoginForm.AccessToken;
+            })).ToString();
+        }
+
+        public string GetAccessToken()
         {
             if (string.IsNullOrEmpty(LoginForm.AccessToken))
-                return MainForm.NewAccessToken();
+                return this.NewAccessToken();
             return LoginForm.AccessToken;
         }
 
         private void btn_combine_Click(object sender, EventArgs e)
         {
-            var destinationProject = store[dest.SelectedText]; 
+            var selectedItem = (dest.SelectedItem as ComboBoxItem);
+            if (selectedItem == null)
+            {
+                MessageBox.Show("Please specify the destination then click combine button.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+            var result = MessageBox.Show(string.Format("Are you sure you want to proceed moving selected tasks to {0}", selectedItem.Text),
+                "Confirmation Box", MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2);
+            if (result == DialogResult.No)
+                return;
+
+            var destinationProject = store[selectedItem.Value];
             foreach (TreeNode node in tree.Nodes)
             {
                 if (node.Checked)
                 {
-                    if (node.Parent != null && !node.Parent.Checked)
+                    foreach (var task in store[node.Name].Tasks)
                     {
-                        destinationProject.AppendTasks(node.Name, 
-                            store[node.Parent.Name].Tasks[node.Name], store[node.Name].Environments);
-                    }
-                    else if (node.Parent == null)
-                    {
-                        foreach (var task in store[node.Name].Tasks)
+                        try
                         {
-                            destinationProject.AppendTasks(task.Key, 
+                            destinationProject.AppendTasks(task.Key,
                                 task.Value, store[node.Name].Environments);
+                        }
+                        catch (Exception ex)
+                        {
+                            Invoke(new Action(() =>
+                            {
+                                this.WriteOutput(string.Format("\nError occur on project {0}! Error Details {1}"
+                                    , node.Text, ex.Message), true);
+                            }));
                         }
                     }
                 }
+                else
+                {
+                    foreach (TreeNode subNode in node.Nodes)
+                    {
+                        try
+                        {
+
+                            if (subNode.Checked)
+                            {
+                                destinationProject.AppendTasks(subNode.Name,
+                                    store[node.Name].Tasks[subNode.Name], store[node.Name].Environments);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Invoke(new Action(() =>
+                            {
+                                this.WriteOutput(string.Format("\nError occur on project {0}! on Task {1}! Error Details {2}",
+                                    node.Text, subNode.Text, ex.Message), true);
+                            }));
+                        }
+                    }
+                }
+
             }
-            destinationProject.Update();
+            try
+            {
+                destinationProject.Update();
+                this.WriteOutput(string.Format("\nSucceed!, the project {0} was updated succesfully.", destinationProject.DisplayName));
+            }
+            catch (Exception ex)
+            {
+                this.WriteOutput(string.Format("\nError updating project, error details: {0}", ex.Message), true);
+                destinationProject.Reset();
+            }
         }
 
 
         private void Init()
         {
-            store = ProjectStore.GetInstance(new Authentication(MainForm.GetAccessToken()));
+            Invoke(new Action(() =>
+            {
+                this.Enabled = false;
+            }));
+            store = ProjectStore.GetInstance(new Authentication());
+
             foreach (var project in store.Projects)
             {
-                var node = tree.Nodes.Add(project.ProjectName, project.DisplayName);
-                foreach (var task in project.Tasks)
+                Invoke(new Action(() =>
                 {
-                    node.Nodes.Add(task.Key);
-                }
+                    dest.Items.Add(new ComboBoxItem(project.DisplayName, project.ProjectName));
+                    var node = tree.Nodes.Add(project.ProjectName, project.DisplayName);
+                    foreach (var task in project.Tasks)
+                    {
+                        node.Nodes.Add(task.Key, task.Key);
+                    }
+                }));
             }
+            Invoke(new Action(() =>
+            {
+                progressBar1.Value = 100;
+                txt_output.AppendText("\nDone.");
+                this.Enabled = true;
+            }));
         }
+
         #region Sys
         private void SetIE11KeyforWebBrowserControl(string appName)
         {
@@ -99,7 +201,7 @@ namespace PowerAppCDSHelper
                 string FindAppkey = Convert.ToString(Regkey.GetValue(appName));
 
                 // Check if key is already present
-                if (FindAppkey == "11000")
+                if (FindAppkey == "8888")
                 {
                     //MessageBox.Show("Required Application Settings Present");
                     Regkey.Close();
@@ -108,12 +210,12 @@ namespace PowerAppCDSHelper
 
                 // If a key is not present add the key, Key value 8000 (decimal)
                 if (string.IsNullOrEmpty(FindAppkey))
-                    Regkey.SetValue(appName, unchecked((int)0x2AF8), RegistryValueKind.DWord);
+                    Regkey.SetValue(appName, unchecked((int)0x22B8), RegistryValueKind.DWord);
 
                 // Check for the key after adding
                 FindAppkey = Convert.ToString(Regkey.GetValue(appName));
 
-                if (FindAppkey == "11000")
+                if (FindAppkey == "8888")
                 {
 
                 }
@@ -135,9 +237,56 @@ namespace PowerAppCDSHelper
         }
         #endregion
 
-        private void backgroundWorker1_DoWork(object sender, DoWorkEventArgs e)
+        private void refreshToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            Init();
+            new Thread(() =>
+            {
+                Init();
+            })
+                .Start();
+        }
+
+        private void exitToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            Application.Exit();
+        }
+
+        private void tree_AfterCheck(object sender, TreeViewEventArgs e)
+        {
+            if (e.Action == TreeViewAction.Unknown)
+                return;
+
+            validateTreeViewSelection(e.Node);
+        }
+
+        private void validateTreeViewSelection(TreeNode eNode)
+        {
+            if (eNode.Parent == null)
+            {
+                foreach (TreeNode node in eNode.Nodes)
+                {
+                    node.Checked = eNode.Checked;
+                }
+            }
+            else
+            {
+                bool _parentChecked = true;
+                foreach (TreeNode node in eNode.Parent.Nodes)
+                {
+                    if (!node.Checked)
+                    {
+                        _parentChecked = false;
+                        break;
+                    }
+                }
+                eNode.Parent.Checked = _parentChecked;
+            }
+        }
+
+        private void aboutToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            MessageBox.Show("This application to combine common data service projects tasks together automatically instead of doing this manually.\nAuthor: Mohammad Bani Hani\nEmail: jemo800@gmail.com"
+                , "Common Data Service Helper", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
     }
 }

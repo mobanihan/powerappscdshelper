@@ -1,18 +1,23 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace PowerAppCDSHelper.Model
 {
     public class Authentication
     {
+        public static Func<string> GetToken;
+
+        public string OnGetToken()
+        {
+            if (GetToken != null)
+                return GetToken();
+            throw new InvalidOperationException("Can't generate token");
+        }
+
         public string Token { get; private set; }
 
         public Authentication()
         {
-
+            Token = OnGetToken();
         }
 
         public Authentication(string token)
@@ -20,11 +25,10 @@ namespace PowerAppCDSHelper.Model
             Token = token;
         }
 
-     
         public string NewToken()
         {
-            // do some magic
-            return MainForm.GetAccessToken();
+            Token = OnGetToken();
+            return Token;
         }
     }
 }

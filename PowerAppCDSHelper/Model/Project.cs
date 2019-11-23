@@ -11,6 +11,8 @@ namespace PowerAppCDSHelper.Model
 {
     public class Project
     {
+        private string _rawProjectOrig;
+
         private dynamic _rawProject;
 
         private Authentication _authentication;
@@ -49,13 +51,16 @@ namespace PowerAppCDSHelper.Model
         {
             if (!IsValidEnvironment(environments))
                 throw new InvalidOperationException("Combining projects should be occur within the same environments");
+
             if (Tasks.ContainsKey(name))
-                throw new Exception("Task name already exist. Please edit name so we can proceed.");
-            Tasks.Add(name, task);
+                Tasks[name] = task;
+            else
+                Tasks.Add(name, task);
         }
 
         public void Update()
         {
+            Order();
             var result = WebCallDelegate.CallApi(_authentication,
                 new Func<HttpClient, HttpResponseMessage>((client) =>
                 {
@@ -74,6 +79,12 @@ namespace PowerAppCDSHelper.Model
                 }));
         }
 
+        public void Reset()
+        {
+            _rawProject = JsonConvert.DeserializeObject(_rawProjectOrig);
+            InitFromRawProject();
+        }
+
         private void Order()
         {
             var tasks = new List<dynamic>();
@@ -84,7 +95,7 @@ namespace PowerAppCDSHelper.Model
                 tasks.Add(item.Value);
                 ++order;
             }
-            _rawProject["entityMappingTasks"] = tasks;
+            _rawProject["entityMappingTasks"] = Newtonsoft.Json.Linq.JToken.FromObject(tasks);
         }
 
         /// <summary>
@@ -122,7 +133,9 @@ namespace PowerAppCDSHelper.Model
                 return response;
             }));
 
+            _rawProjectOrig = rawProjects;
             _rawProject = JsonConvert.DeserializeObject(rawProjects);
+
             InitFromRawProject();
         }
 
