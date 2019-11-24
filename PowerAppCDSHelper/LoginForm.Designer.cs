@@ -40,9 +40,9 @@
             this.webBrowser1.Name = "webBrowser1";
             this.webBrowser1.Size = new System.Drawing.Size(385, 450);
             this.webBrowser1.TabIndex = 0;
-            this.webBrowser1.Url = new System.Uri("https://admin.powerapps.com/account/login", System.UriKind.Absolute);
+            this.webBrowser1.Url = new System.Uri("", System.UriKind.Relative);
             // 
-            // Form2
+            // LoginForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
@@ -50,7 +50,7 @@
             this.Controls.Add(this.webBrowser1);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
-            this.Name = "Form2";
+            this.Name = "LoginForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
             this.ResumeLayout(false);
 

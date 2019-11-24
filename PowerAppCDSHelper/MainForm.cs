@@ -17,8 +17,8 @@ namespace PowerAppCDSHelper
         public MainForm()
         {
             InitializeComponent();
-            var appName = Process.GetCurrentProcess().ProcessName + ".exe";
-            SetIE11KeyforWebBrowserControl(appName);
+            //var appName = Process.GetCurrentProcess().ProcessName + ".exe";
+            //SetIE11KeyforWebBrowserControl(appName);
 
             ProjectStore.ProgressChanged = new Action<int, int>((current, total) =>
             {
@@ -43,6 +43,11 @@ namespace PowerAppCDSHelper
             });
 
             this.txt_output.AppendText("Starting....");
+            refresh();
+        }
+
+        private void refresh()
+        {
             new Thread(() =>
             {
                 Init();
@@ -203,7 +208,7 @@ namespace PowerAppCDSHelper
                 string FindAppkey = Convert.ToString(Regkey.GetValue(appName));
 
                 // Check if key is already present
-                if (FindAppkey == "8888")
+                if (FindAppkey == "11000")
                 {
                     //MessageBox.Show("Required Application Settings Present");
                     Regkey.Close();
@@ -212,12 +217,12 @@ namespace PowerAppCDSHelper
 
                 // If a key is not present add the key, Key value 8000 (decimal)
                 if (string.IsNullOrEmpty(FindAppkey))
-                    Regkey.SetValue(appName, unchecked((int)0x22B8), RegistryValueKind.DWord);
+                    Regkey.SetValue(appName, unchecked((int)0x2AF8), RegistryValueKind.DWord);
 
                 // Check for the key after adding
                 FindAppkey = Convert.ToString(Regkey.GetValue(appName));
 
-                if (FindAppkey == "8888")
+                if (FindAppkey == "11000")
                 {
 
                 }
@@ -241,11 +246,7 @@ namespace PowerAppCDSHelper
 
         private void refreshToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            new Thread(() =>
-            {
-                Init();
-            })
-                .Start();
+            refresh();
         }
 
         private void exitToolStripMenuItem_Click(object sender, EventArgs e)
@@ -289,6 +290,12 @@ namespace PowerAppCDSHelper
         {
             MessageBox.Show("This application to combine common data service projects tasks together automatically instead of doing this manually.\nAuthor: Mohammad Bani Hani\nEmail: jemo800@gmail.com"
                 , "Common Data Service Helper", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        private void toolStripMenuItem1_Click(object sender, EventArgs e)
+        {
+            var dialogResult = new LoginForm(true).ShowDialog();
+            refresh();
         }
     }
 }
